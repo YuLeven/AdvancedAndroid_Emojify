@@ -37,7 +37,9 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 
 import butterknife.BindView;
 import butterknife.ButterKnife;
@@ -121,37 +123,14 @@ public class MainActivity extends AppCompatActivity {
      * Creates a temporary image file and captures a picture to store in it.
      */
     private void launchCamera() {
-
         // Create the capture image intent
         Intent takePictureIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
 
         // Ensure that there's a camera activity to handle the intent
         if (takePictureIntent.resolveActivity(getPackageManager()) != null) {
-            // Create the temporary File where the photo should go
-            File photoFile = null;
-            try {
-                photoFile = BitmapUtils.createTempImageFile(this);
-            } catch (IOException ex) {
-                // Error occurred while creating the File
-                ex.printStackTrace();
-            }
-            // Continue only if the File was successfully created
-            if (photoFile != null) {
 
-                // Get the path of the temporary file
-                mTempPhotoPath = photoFile.getAbsolutePath();
-
-                // Get the content URI for the image file
-                Uri photoURI = FileProvider.getUriForFile(this,
-                        FILE_PROVIDER_AUTHORITY,
-                        photoFile);
-
-                // Add the URI so the camera can store the image
-                takePictureIntent.putExtra(MediaStore.EXTRA_OUTPUT, photoURI);
-
-                // Launch the camera activity
-                startActivityForResult(takePictureIntent, REQUEST_IMAGE_CAPTURE);
-            }
+            // Launch the camera activity
+            startActivityForResult(takePictureIntent, REQUEST_IMAGE_CAPTURE);
         }
     }
 
@@ -159,13 +138,45 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         // If the image capture activity was called and was successful
-        if (requestCode == REQUEST_IMAGE_CAPTURE && resultCode == RESULT_OK) {
-            // Process the image and set it to the TextView
-            processAndSetImage();
-        } else {
+        if (requestCode != REQUEST_IMAGE_CAPTURE && resultCode != RESULT_OK) { return; }
 
-            // Otherwise, delete the temporary image file
-            BitmapUtils.deleteImageFile(this, mTempPhotoPath);
+        // Create the temporary File where the photo should go
+        File photoFile = null;
+        try {
+            // Create the temp file and get the path of the temporary file
+            photoFile = BitmapUtils.createTempImageFile(this);
+            mTempPhotoPath = photoFile.getAbsolutePath();
+
+            // Get the bundle from the camera
+            Bundle extras = data.getExtras();
+            if (extras == null) {
+                throw new IOException("Couldn't fetch the camera bundle to instantiate the bitmap");
+            }
+
+            // Instantiate a bitmap from the received data
+            // Optimally I wouldn't have this being stored in the heap (even if temporarily)
+            // just to create a file on the disk soon afterwards, but this was the besy way
+            // I've found to have the start code work on my phone without having to mess too much
+            // with their's implementation.
+            Bitmap bitmap = (Bitmap) extras.get("data");
+            if (bitmap == null) {
+                throw new IOException("Couldn't case the received camera data to Bitmap");
+            }
+
+            // Persist the bitmap to the disk
+            try (FileOutputStream fileOutputStream = new FileOutputStream(photoFile)) {
+                if (bitmap.compress(Bitmap.CompressFormat.PNG, 95, fileOutputStream)) {
+                    // Process the image and set it to the TextView
+                    processAndSetImage();
+                }
+            }
+
+        } catch (IOException ex) {
+            // Error occurred while creating the File
+            ex.printStackTrace();
+            if (mTempPhotoPath != null) {
+                BitmapUtils.deleteImageFile(this, mTempPhotoPath);
+            }
         }
     }
 
@@ -183,7 +194,6 @@ public class MainActivity extends AppCompatActivity {
 
         // Resample the saved image to fit the ImageView
         mResultsBitmap = BitmapUtils.resamplePic(this, mTempPhotoPath);
-
 
         // Detect the faces and overlay the appropriate emoji
         mResultsBitmap = Emojifier.detectFacesandOverlayEmoji(this, mResultsBitmap);
