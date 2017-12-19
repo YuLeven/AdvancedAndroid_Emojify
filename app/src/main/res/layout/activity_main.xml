@@ -46,12 +46,14 @@
         android:textAppearance="@style/TextAppearance.AppCompat.Display1" />
 
     <Button
+        style="@style/Widget.AppCompat.Button.Colored"
         android:id="@+id/emojify_button"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_centerHorizontal="true"
         android:layout_centerVertical="true"
         android:text="@string/go"
+        android:textColor="@color/whiteIsh"
         android:textAppearance="@style/TextAppearance.AppCompat.Display1"/>
 
     <android.support.design.widget.FloatingActionButton
