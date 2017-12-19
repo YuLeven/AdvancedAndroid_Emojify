@@ -24,6 +24,7 @@ import android.net.Uri;
 import android.os.Environment;
 import android.support.v4.content.FileProvider;
 import android.util.DisplayMetrics;
+import android.util.Log;
 import android.view.WindowManager;
 import android.widget.Toast;
 
@@ -38,6 +39,7 @@ import java.util.Locale;
 class BitmapUtils {
 
     private static final String FILE_PROVIDER_AUTHORITY = "com.example.android.fileprovider";
+    private static final String LOG_TAG = BitmapUtils.class.getCanonicalName();
 
 
     /**
@@ -52,6 +54,12 @@ class BitmapUtils {
         // Get device screen size information
         DisplayMetrics metrics = new DisplayMetrics();
         WindowManager manager = (WindowManager) context.getSystemService(Context.WINDOW_SERVICE);
+
+        // Return early if the manager couldn't be retrieved
+        if (manager == null) {
+            Log.e(LOG_TAG, "Couldn't retrieve the WindowManager");
+            return null;
+        }
         manager.getDefaultDisplay().getMetrics(metrics);
 
         int targetH = metrics.heightPixels;
@@ -157,10 +165,8 @@ class BitmapUtils {
         if (success) {
             File imageFile = new File(storageDir, imageFileName);
             savedImagePath = imageFile.getAbsolutePath();
-            try {
-                OutputStream fOut = new FileOutputStream(imageFile);
+            try (OutputStream fOut = new FileOutputStream(imageFile)) {
                 image.compress(Bitmap.CompressFormat.JPEG, 100, fOut);
-                fOut.close();
             } catch (Exception e) {
                 e.printStackTrace();
             }
