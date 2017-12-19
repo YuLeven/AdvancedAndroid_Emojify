@@ -55,18 +55,20 @@ class Emojifier {
         Frame frame = new Frame.Builder().setBitmap(picture).build();
 
         // Detect the faces
-        SparseArray<Face> faces = detector.detect(frame);
+        try {
+            SparseArray<Face> faces = detector.detect(frame);
 
-        // Log the number of faces
-        Timber.d("detectFaces: number of faces = " + faces.size());
+            // Log the number of faces
+            Timber.d("detectFaces: number of faces = " + faces.size());
 
-        // Initialize result bitmap to original picture
-        Bitmap resultBitmap = picture;
+            // Initialize result bitmap to original picture
+            Bitmap resultBitmap = picture;
 
-        // If there are no faces detected, show a Toast message
-        if (faces.size() == 0) {
-            Toast.makeText(context, R.string.no_faces_message, Toast.LENGTH_SHORT).show();
-        } else {
+            // If there are no faces detected, show a Toast message
+            if (faces.size() == 0) {
+                Toast.makeText(context, R.string.no_faces_message, Toast.LENGTH_SHORT).show();
+                return null;
+            }
 
             // Iterate through the faces
             for (int i = 0; i < faces.size(); ++i) {
@@ -114,13 +116,13 @@ class Emojifier {
                 // Add the emojiBitmap to the proper position in the original image
                 resultBitmap = addBitmapToFace(resultBitmap, emojiBitmap, face);
             }
+
+            return resultBitmap;
+        } finally {
+            // Release the detector
+            detector.release();
         }
 
-
-        // Release the detector
-        detector.release();
-
-        return resultBitmap;
     }
 
 
